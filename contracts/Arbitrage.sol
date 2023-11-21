@@ -5,7 +5,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IUniswapV2Pair} from "v2-core/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Callee} from "v2-core/interfaces/IUniswapV2Callee.sol";
-import "../lib/forge-std/src/console2.sol";
 
 // This is a practice contract for flash swap arbitrage
 contract Arbitrage is IUniswapV2Callee, Ownable {
@@ -33,7 +32,8 @@ contract Arbitrage is IUniswapV2Callee, Ownable {
     //
     // EXTERNAL NON-VIEW
     //
-    function uniswapV2Call(address sender, uint256 amount0, uint256 amount1, bytes calldata data) external override {
+    function uniswapV2Call(address sender, uint256 amount0, uint256, bytes calldata data) external override {
+        require(sender == address(this), "Only this contract can call");
         Calldata memory inputData = abi.decode(data, (Calldata));
         address priceLowerPool = inputData.priceLowerPool;
         address priceHigherPool = inputData.priceHigherPool;
@@ -41,6 +41,9 @@ contract Arbitrage is IUniswapV2Callee, Ownable {
         uint256 repayAmount = inputData.repayAmount;
         address weth = inputData.weth;
         address usdc = inputData.usdc;
+
+        require(msg.sender == priceLowerPool, "Only priceLowerPool can call");
+
         // TODO
         IERC20(weth).transfer(priceHigherPool, amount0);
         IUniswapV2Pair(priceHigherPool).swap(0, swapAmount, address(this), new bytes(0));
